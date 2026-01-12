@@ -94,25 +94,30 @@ elif menu == "TACTICAL_SYNC":
                         cap.release()
                         
                         if ret:
-                            # THE FIX: This block must be indented inside 'if ret:'
-                            st.write("Applying Wide-Angle Zoom (1280px)...")
+                            st.write("Overclocking Vision for Wide-Angle...")
                             results = engine(
                                 frame, 
-                                imgsz=1280,   # High-res for tiny players
-                                conf=0.25,    # Sensitivity
-                                classes=[0]   # '0' is the code for 'Person'
+                                imgsz=1280,   
+                                conf=0.15,    # More aggressive detection
+                                classes=[0],  
+                                verbose=False
                             )
+                            
+                            # Extracting Real Coordinates for the Data Lake
+                            boxes = results[0].boxes.xyxy.cpu().numpy() # Get [x1, y1, x2, y2]
                             
                             annotated_frame = results[0].plot()
                             st.image(annotated_frame, caption="PROPRIETARY TACTICAL ANALYSIS", use_container_width=True)
                             
-                            node_count = len(results[0].boxes)
+                            node_count = len(boxes)
                             st.metric("NODES_DETECTED", f"{node_count}")
+                            
+                            # Store these in session state to "Sync" with the Data Lake page
+                            st.session_state['last_analysis'] = boxes
+                            
                             status.update(label="ANALYSIS_COMPLETE", state="complete")
                         else:
                             st.error("Error: Could not read video frame.")
-            else:
-                st.error("❌ ENGINE_OFFLINE")
 elif menu == "DATA_LAKE":
     st.title("📊 DATA_LAKE_SYNCHRONIZATION")
     sync_data = {
