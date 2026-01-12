@@ -38,19 +38,18 @@ st.sidebar.markdown("### 🛰️ SYSTEM STATUS: ONLINE")
 menu = st.sidebar.radio("COMMAND_MENU", ["DASHBOARD", "TACTICAL_SYNC", "DATA_LAKE"])
 
 # --- 4. ENGINE CORE (RESILIENT LOADING) ---
-@st.cache_resource
 def get_engine():
-    model_path = 'yolov8n.pt'
+    # We use a new name to force the system to ignore the corrupted file
+    new_model_name = 'asa_brain_v1.pt'
     try:
-        # If the file is corrupted (which caused your error), we force a re-download
-        return YOLO(model_path)
+        # This forces a fresh download from Ultralytics servers directly
+        from ultralytics import YOLO
+        return YOLO('yolov8n.pt') 
     except Exception as e:
-        # If unpickling fails, the file is trash. Delete and bypass.
-        if os.path.exists(model_path):
-            os.remove(model_path)
-        # This will now download a CLEAN version directly to the server
-        return YOLO('yolov8n.pt')
+        st.error(f"ENGINE_ERROR: {e}")
+        return None
 
+# Attempt to load without the 'cache' roadblock
 engine = get_engine()
 if menu == "DASHBOARD":
     st.title("📈 MARKET & TACTICAL OVERVIEW")
