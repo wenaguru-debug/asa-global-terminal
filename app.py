@@ -39,29 +39,37 @@ menu = st.sidebar.radio("COMMAND_MENU", ["DASHBOARD", "TACTICAL_SYNC", "DATA_LAK
 
 import torch # Add this at the very top of your file
 
-# --- 4. ENGINE CORE (INSTITUTIONAL OVERRIDE) ---
-@st.cache_resource
-def get_engine():
-    try:
-        from ultralytics import YOLO
-        import torch
+elif menu == "TACTICAL_SYNC":
+    st.title("🛰️ TACTICAL_SYNC_ENGINE")
+    yt_url = st.text_input("INPUT_DATA_STREAM (YouTube URL) >")
+    
+    if yt_url:
+        col_left, col_right = st.columns([3, 2])
         
-        # This is the "Master Key" to bypass the PyTorch 2.6 Unpickling error
-        def patched_load(*args, **kwargs):
-            kwargs['weights_only'] = False
-            return torch.original_load(*args, **kwargs)
-
-        if not hasattr(torch, 'original_load'):
-            torch.original_load = torch.load
-            torch.load = patched_load
-        
-        return YOLO('yolov8n.pt') 
-    except Exception as e:
-        # If it still fails, we'll display the error clearly to debug
-        st.error(f"ENGINE_SYSTEM_FAILURE: {e}")
-        return None
-
-engine = get_engine()
+        with col_left:
+            st.video(yt_url)
+            
+        with col_right:
+            st.subheader("AI_ANALYSIS_PULSE")
+            if engine:
+                st.success("✅ AI_CORE_ONLINE")
+                
+                # THE SYNC BUTTON
+                if st.button("RUN_TACTICAL_INFERENCE"):
+                    with st.status("Analyzing Wide-Angle Feed...", expanded=True) as status:
+                        st.write("Initializing Frame-Grabber...")
+                        # In V1.2 we will add the cv2 logic here to grab the actual frame
+                        st.write("Detecting Tactical Nodes (Players/Ball)...")
+                        
+                        # Simulated Detection Output for now
+                        st.image("https://raw.githubusercontent.com/ultralytics/assets/main/yolov8/yolo-comparison.png", 
+                                 caption="PROTOTYPE: Tactical AI identifies 'Nodes' (Players) in high-contrast", 
+                                 use_container_width=True)
+                        
+                        status.update(label="ANALYSIS_COMPLETE", state="complete")
+                        st.metric("NODES_DETECTED", "22", "Full Pitch Sync")
+            else:
+                st.error("❌ ENGINE_OFFLINE")
 if menu == "DASHBOARD":
     st.title("📈 MARKET & TACTICAL OVERVIEW")
     c1, c2, c3 = st.columns(3)
