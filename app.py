@@ -37,16 +37,21 @@ if not st.session_state.auth:
 st.sidebar.markdown("### 🛰️ SYSTEM STATUS: ONLINE")
 menu = st.sidebar.radio("COMMAND_MENU", ["DASHBOARD", "TACTICAL_SYNC", "DATA_LAKE"])
 
-# --- 4. ENGINE CORE ---
+# --- 4. ENGINE CORE (RESILIENT LOADING) ---
 @st.cache_resource
 def get_engine():
-    if os.path.exists('yolov8n.pt'):
+    model_path = 'yolov8n.pt'
+    try:
+        # If the file is corrupted (which caused your error), we force a re-download
+        return YOLO(model_path)
+    except Exception as e:
+        # If unpickling fails, the file is trash. Delete and bypass.
+        if os.path.exists(model_path):
+            os.remove(model_path)
+        # This will now download a CLEAN version directly to the server
         return YOLO('yolov8n.pt')
-    return None
 
 engine = get_engine()
-
-# --- 5. MODULES ---
 if menu == "DASHBOARD":
     st.title("📈 MARKET & TACTICAL OVERVIEW")
     c1, c2, c3 = st.columns(3)
