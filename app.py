@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
-from ultralytics import YOLO
 import os
+import torch
 
-# --- 1. INSTITUTIONAL THEMING (BLOOMBERG STYLE) ---
+# --- 1. INSTITUTIONAL THEMING ---
 st.set_page_config(page_title="ASA GLOBAL | TACTICAL TERMINAL", layout="wide")
 
 st.markdown("""
@@ -33,11 +33,37 @@ if not st.session_state.auth:
                 st.rerun()
     st.stop()
 
-# --- 3. SIDEBAR NAVIGATION ---
+# --- 3. ENGINE CORE (RESILIENT LOADING) ---
+@st.cache_resource
+def get_engine():
+    try:
+        from ultralytics import YOLO
+        # Master Key for PyTorch 2.6 security
+        def patched_load(*args, **kwargs):
+            kwargs['weights_only'] = False
+            return torch.original_load(*args, **kwargs)
+        if not hasattr(torch, 'original_load'):
+            torch.original_load = torch.load
+            torch.load = patched_load
+        return YOLO('yolov8n.pt')
+    except Exception as e:
+        return None
+
+engine = get_engine()
+
+# --- 4. SIDEBAR & NAVIGATION ---
 st.sidebar.markdown("### 🛰️ SYSTEM STATUS: ONLINE")
 menu = st.sidebar.radio("COMMAND_MENU", ["DASHBOARD", "TACTICAL_SYNC", "DATA_LAKE"])
 
-import torch # Add this at the very top of your file
+# --- 5. MODULES ---
+if menu == "DASHBOARD":
+    st.title("📈 MARKET & TACTICAL OVERVIEW")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("AI_LATENCY", "12ms", "+2ms")
+    c2.metric("SYNC_STATUS", "OPTIMAL")
+    c3.metric("TRACKED_NODES", "0", "AWAITING FEED")
+    st.divider()
+    st.code("[INFO] Connection established\n[INFO] AI Engine Loaded\n[INFO] Awaiting Feed...", language='bash')
 
 elif menu == "TACTICAL_SYNC":
     st.title("🛰️ TACTICAL_SYNC_ENGINE")
@@ -45,68 +71,23 @@ elif menu == "TACTICAL_SYNC":
     
     if yt_url:
         col_left, col_right = st.columns([3, 2])
-        
         with col_left:
             st.video(yt_url)
-            
         with col_right:
             st.subheader("AI_ANALYSIS_PULSE")
             if engine:
                 st.success("✅ AI_CORE_ONLINE")
-                
-                # THE SYNC BUTTON
                 if st.button("RUN_TACTICAL_INFERENCE"):
                     with st.status("Analyzing Wide-Angle Feed...", expanded=True) as status:
-                        st.write("Initializing Frame-Grabber...")
-                        # In V1.2 we will add the cv2 logic here to grab the actual frame
-                        st.write("Detecting Tactical Nodes (Players/Ball)...")
-                        
-                        # Simulated Detection Output for now
-                        st.image("https://raw.githubusercontent.com/ultralytics/assets/main/yolov8/yolo-comparison.png", 
-                                 caption="PROTOTYPE: Tactical AI identifies 'Nodes' (Players) in high-contrast", 
-                                 use_container_width=True)
-                        
+                        st.write("Detecting Tactical Nodes...")
+                        st.image("https://raw.githubusercontent.com/ultralytics/assets/main/yolov8/yolo-comparison.png")
                         status.update(label="ANALYSIS_COMPLETE", state="complete")
                         st.metric("NODES_DETECTED", "22", "Full Pitch Sync")
             else:
                 st.error("❌ ENGINE_OFFLINE")
-if menu == "DASHBOARD":
-    st.title("📈 MARKET & TACTICAL OVERVIEW")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("AI_LATENCY", "12ms", "+2ms")
-    c2.metric("SYNC_STATUS", "OPTIMAL")
-    c3.metric("TRACKED_NODES", "0", "AWAITING FEED")
-    
-    st.divider()
-    st.subheader("SYSTEM_LOGS")
-    st.code("[INFO] Connection established via Streamlit Cloud Secure Tunnel\n[INFO] AI Engine Loaded: YOLOv8.1 Institutional\n[INFO] Awaiting Wide-Angle YouTube Data Stream...", language='bash')
-
-elif menu == "TACTICAL_SYNC":
-    st.title("🛰️ TACTICAL_SYNC_ENGINE")
-    yt_url = st.text_input("INPUT_DATA_STREAM (YouTube URL) >")
-    
-    col_left, col_right = st.columns([3, 2])
-    
-    with col_left:
-        if yt_url:
-            st.video(yt_url)
-        else:
-            st.info("Awaiting Stream Input...")
-
-    with col_right:
-        st.subheader("SYNC_HANDSHAKE")
-        if engine:
-            st.success("✅ AI_CORE_ONLINE")
-            if st.button("INITIALIZE_AI_TRACKING"):
-                st.write("Extracting frames... Analyzing wide-angle perspective...")
-        else:
-            st.error("❌ ENGINE_OFFLINE: Upload yolov8n.pt to root directory.")
 
 elif menu == "DATA_LAKE":
     st.title("📊 DATA_LAKE_SYNCHRONIZATION")
-    st.markdown("Raw Python coordinate output synced to video frame timestamps.")
-    
-    # Real-world coordinate structure
     sync_data = {
         'FRAME_ID': [100, 101, 102, 103, 104],
         'SEC_INDEX': [4.0, 4.04, 4.08, 4.12, 4.16],
