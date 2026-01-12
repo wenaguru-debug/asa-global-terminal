@@ -85,39 +85,44 @@ elif menu == "TACTICAL_SYNC":
             if engine:
                 st.success("✅ AI_CORE_ONLINE")
                 
-                if st.button("RUN TACTICAL FRAME ANALYSIS"):
-                    with st.status("Processing Local Feed...", expanded=True) as status:
+                if st.button("RUN FULL TACTICAL DATA SYNC"):
+                    with st.status("Syncing Python Logic to Video Frames...", expanded=True) as status:
                         import cv2
+                        import pandas as pd
                         
                         cap = cv2.VideoCapture("temp_tactical_video.mp4")
-                        ret, frame = cap.read()
+                        all_sync_data = []
+                        frame_count = 0
+                        
+                        # Process every 30th frame (1 frame per second) to keep it fast
+                        while cap.isOpened():
+                            ret, frame = cap.read()
+                            if not ret:
+                                break
+                                
+                            if frame_count % 30 == 0:
+                                st.write(f"Syncing Timestamp: {frame_count//30}s...")
+                                results = engine(frame, imgsz=1280, conf=0.15, classes=[0], verbose=False)
+                                
+                                # Extract X, Y centers of every player detected
+                                for box in results[0].boxes.xywh.cpu().numpy():
+                                    x, y, w, h = box
+                                    all_sync_data.append({
+                                        "SEC": frame_count // 30,
+                                        "PLAYER_X": round(x, 2),
+                                        "PLAYER_Y": round(y, 2),
+                                        "CONF": round(float(results[0].boxes.conf[0]), 2)
+                                    })
+                            
+                            frame_count += 1
+                            if frame_count > 300: # Limit to first 10 seconds for the "Master Prototype"
+                                break
+                        
                         cap.release()
                         
-                        if ret:
-                            st.write("Overclocking Vision for Wide-Angle...")
-                            results = engine(
-                                frame, 
-                                imgsz=1280,   
-                                conf=0.15,    # More aggressive detection
-                                classes=[0],  
-                                verbose=False
-                            )
-                            
-                            # Extracting Real Coordinates for the Data Lake
-                            boxes = results[0].boxes.xyxy.cpu().numpy() # Get [x1, y1, x2, y2]
-                            
-                            annotated_frame = results[0].plot()
-                            st.image(annotated_frame, caption="PROPRIETARY TACTICAL ANALYSIS", use_container_width=True)
-                            
-                            node_count = len(boxes)
-                            st.metric("NODES_DETECTED", f"{node_count}")
-                            
-                            # Store these in session state to "Sync" with the Data Lake page
-                            st.session_state['last_analysis'] = boxes
-                            
-                            status.update(label="ANALYSIS_COMPLETE", state="complete")
-                        else:
-                            st.error("Error: Could not read video frame.")
+                        # Save to Session State for the DATA_LAKE page
+                        st.session_state['synced_df'] = pd.DataFrame(all_sync_data)
+                        status.update(label="SYNC COMPLETE: Data Exported to Lake", state="complete")
 elif menu == "DATA_LAKE":
     st.title("📊 DATA_LAKE_SYNCHRONIZATION")
     sync_data = {
