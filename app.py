@@ -96,9 +96,13 @@ elif menu == "TACTICAL_SYNC":
                         cap.release()
                         
                         if ret:
-                            # 3. Run AI Inference
-                            results = engine(frame)
-                            annotated_frame = results[0].plot()
+                            # --- 3. Run AI Inference (Enhanced for Wide-Angle) ---
+results = engine(
+    frame, 
+    imgsz=1280,   # Upscales the frame so tiny players become visible
+    conf=0.25,    # Lowers threshold to catch distant players
+    classes=[0]   # Force the AI to only look for 'Person' (Class 0 in YOLO)
+)
                             
                             # 4. Display Result
                             st.image(annotated_frame, caption="PROPRIETARY TACTICAL ANALYSIS", use_container_width=True)
