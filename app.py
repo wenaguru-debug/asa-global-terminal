@@ -27,17 +27,27 @@ else:
         st.write("System Status: ONLINE")
         st.info("Awaiting tactical data feed...")
         
-    elif menu == "TACTICAL SYNC":
-        st.header("🛰️ VIDEO SYNC ENGINE")
+ elif menu == "TACTICAL SYNC":
+        st.header("🛰️ TACTICAL SYNC ENGINE")
         
-        try:
-            import ultralytics
-            from ultralytics import YOLO
-            st.success(f"✅ AI ENGINE LOADED (Version: {ultralytics.__version__})")
-        except Exception as e:
-            st.error(f"❌ LOGIC ERROR: {e}")
-            st.info("The system sees the files, but the 'Brain' isn't waking up.")
+        # Confirmation of Brain Health
+        from ultralytics import YOLO
+        model = YOLO('yolov8n.pt') # Loading the lightweight tactical model
+        st.success("✅ TACTICAL AI READY")
 
-        yt_url = st.text_input("PASTE TACTICAL YOUTUBE URL:")
-        if yt_url:
-            st.video(yt_url)
+        yt_url = st.text_input("PASTE TACTICAL YOUTUBE URL:", placeholder="https://www.youtube.com/watch?v=...")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Raw Feed")
+            if yt_url:
+                st.video(yt_url)
+        
+        with col2:
+            st.subheader("Tactical Analysis")
+            if yt_url:
+                st.info("Syncing YouTube Stream to Python Logic...")
+                # Placeholder for the Frame-Sync Output
+                st.image("https://via.placeholder.com/640x360.png?text=ASA+TACTICAL+OVERLAY+ACTIVE", use_column_width=True)
+                st.button("RUN TACTICAL SYNC")
