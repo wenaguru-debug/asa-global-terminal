@@ -67,48 +67,50 @@ if menu == "DASHBOARD":
 
 elif menu == "TACTICAL_SYNC":
     st.title("🛰️ TACTICAL_SYNC_ENGINE")
-    yt_url = st.text_input("INPUT_DATA_STREAM (YouTube URL) >")
     
-    if yt_url:
+    # 1. Direct File Upload (Bypassing YouTube restrictions)
+    uploaded_file = st.file_uploader("UPLOAD TACTICAL WIDE-ANGLE FEED (.mp4, .mov, .avi)", type=['mp4', 'mov', 'avi'])
+    
+    if uploaded_file is not None:
         col_left, col_right = st.columns([3, 2])
+        
+        # Save temporary file to process with OpenCV
+        with open("temp_tactical_video.mp4", "wb") as f:
+            f.write(uploaded_file.read())
+            
         with col_left:
-            st.video(yt_url)
+            st.video(uploaded_file)
+            
         with col_right:
             st.subheader("AI_ANALYSIS_PULSE")
             if engine:
                 st.success("✅ AI_CORE_ONLINE")
                 
-                # --- NEW: TACTICAL FRAME GRABBER ---
-                if st.button("CAPTURE & ANALYZE CURRENT FRAME"):
-                    with st.status("Extracting Tactical Frame...", expanded=True) as status:
+                if st.button("RUN TACTICAL FRAME ANALYSIS"):
+                    with st.status("Processing Local Feed...", expanded=True) as status:
                         import cv2
-                        import yt_dlp
                         
-                        # 1. Get Stream URL
-                        ydl_opts = {'format': 'best', 'quiet': True}
-                        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                            info = ydl.extract_info(yt_url, download=False)
-                            stream_url = info['url']
-                        
-                        # 2. Capture Frame via OpenCV
-                        cap = cv2.VideoCapture(stream_url)
+                        # 2. Capture Frame from Uploaded File
+                        cap = cv2.VideoCapture("temp_tactical_video.mp4")
                         ret, frame = cap.read()
                         cap.release()
                         
                         if ret:
-                            # 3. Run Real AI Inference
+                            # 3. Run AI Inference
                             results = engine(frame)
-                            annotated_frame = results[0].plot() # Draws the boxes
+                            annotated_frame = results[0].plot()
                             
                             # 4. Display Result
-                            st.image(annotated_frame, caption="LIVE TACTICAL ANALYSIS", use_container_width=True)
+                            st.image(annotated_frame, caption="PROPRIETARY TACTICAL ANALYSIS", use_container_width=True)
                             
-                            # 5. Extract Data for the Lake
+                            # 5. Extract Metrics
                             node_count = len(results[0].boxes)
                             st.metric("NODES_DETECTED", f"{node_count}")
+                            
                             status.update(label="ANALYSIS_COMPLETE", state="complete")
+                            st.toast("Tactical data synced to Data Lake.")
                         else:
-                            st.error("Failed to capture frame from stream.")
+                            st.error("Error reading video file.")
             else:
                 st.error("❌ ENGINE_OFFLINE")
 
