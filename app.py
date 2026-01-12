@@ -68,13 +68,12 @@ if menu == "DASHBOARD":
 elif menu == "TACTICAL_SYNC":
     st.title("🛰️ TACTICAL_SYNC_ENGINE")
     
-    # 1. Direct File Upload (Bypassing YouTube restrictions)
-    uploaded_file = st.file_uploader("UPLOAD TACTICAL WIDE-ANGLE FEED (.mp4, .mov, .avi)", type=['mp4', 'mov', 'avi'])
+    uploaded_file = st.file_uploader("UPLOAD TACTICAL WIDE-ANGLE FEED", type=['mp4', 'mov', 'avi'])
     
     if uploaded_file is not None:
         col_left, col_right = st.columns([3, 2])
         
-        # Save temporary file to process with OpenCV
+        # Save temp file
         with open("temp_tactical_video.mp4", "wb") as f:
             f.write(uploaded_file.read())
             
@@ -90,34 +89,30 @@ elif menu == "TACTICAL_SYNC":
                     with st.status("Processing Local Feed...", expanded=True) as status:
                         import cv2
                         
-                        # 2. Capture Frame from Uploaded File
                         cap = cv2.VideoCapture("temp_tactical_video.mp4")
                         ret, frame = cap.read()
                         cap.release()
                         
                         if ret:
-                            # --- 3. Run AI Inference (Enhanced for Wide-Angle) ---
-results = engine(
-    frame, 
-    imgsz=1280,   # Upscales the frame so tiny players become visible
-    conf=0.25,    # Lowers threshold to catch distant players
-    classes=[0]   # Force the AI to only look for 'Person' (Class 0 in YOLO)
-)
+                            # THE FIX: This block must be indented inside 'if ret:'
+                            st.write("Applying Wide-Angle Zoom (1280px)...")
+                            results = engine(
+                                frame, 
+                                imgsz=1280,   # High-res for tiny players
+                                conf=0.25,    # Sensitivity
+                                classes=[0]   # '0' is the code for 'Person'
+                            )
                             
-                            # 4. Display Result
+                            annotated_frame = results[0].plot()
                             st.image(annotated_frame, caption="PROPRIETARY TACTICAL ANALYSIS", use_container_width=True)
                             
-                            # 5. Extract Metrics
                             node_count = len(results[0].boxes)
                             st.metric("NODES_DETECTED", f"{node_count}")
-                            
                             status.update(label="ANALYSIS_COMPLETE", state="complete")
-                            st.toast("Tactical data synced to Data Lake.")
                         else:
-                            st.error("Error reading video file.")
+                            st.error("Error: Could not read video frame.")
             else:
                 st.error("❌ ENGINE_OFFLINE")
-
 elif menu == "DATA_LAKE":
     st.title("📊 DATA_LAKE_SYNCHRONIZATION")
     sync_data = {
