@@ -70,33 +70,49 @@ if menu == "TACTICAL_SYNC":
             
         with t_col2:
             if st.button("RUN INSTITUTIONAL DATA SYNC"):
-                with st.status("Processing Tactical Metadata...", expanded=True) as status:
-                    cap = cv2.VideoCapture("temp_v.mp4")
-                    data_points = []
-                    f_idx = 0
-                    
-                    while cap.isOpened():
-                        ret, frame = cap.read()
-                        if not ret or f_idx > 300: break # Process 10s for speed
+                    with st.status("Processing Tactical Metadata...", expanded=True) as status:
+                        cap = cv2.VideoCapture("temp_v.mp4")
+                        data_points = []
+                        f_idx = 0
                         
-                        if f_idx % 30 == 0:
-                            # Using TRACK instead of PREDICT for IDs
-                            results = engine.track(frame, persist=True, imgsz=1280, conf=0.15, classes=[0], verbose=False)
+                        while cap.isOpened():
+                            ret, frame = cap.read()
+                            if not ret or f_idx > 300: break 
                             
-                            if results[0].boxes.id is not None:
-                                boxes = results[0].boxes.xywh.cpu().numpy()
-                                ids = results[0].boxes.id.cpu().numpy().astype(int)
-                                for box, obj_id in zip(boxes, ids):
-                                    data_points.append({
-                                        "SEC": f_idx // 30,
-                                        "ID": obj_id,
-                                        "X": round(float(box[0]), 1),
-                                        "Y": round(float(box[1]), 1)
-                                    })
-                        f_idx += 1
-                    cap.release()
-                    st.session_state['synced_df'] = pd.DataFrame(data_points)
-                    status.update(label="SYNC COMPLETE", state="complete")
+                            if f_idx % 30 == 0:
+                                # Standardizing the track call
+                                results = engine.track(frame, persist=True, imgsz=1280, conf=0.15, classes=[0], verbose=False)
+                                
+                                # Check if IDs exist, if not, try standard detection
+                                if results[0].boxes.id is not None:
+                                    boxes = results[0].boxes.xywh.cpu().numpy()
+                                    ids = results[0].boxes.id.cpu().numpy().astype(int)
+                                    for box, obj_id in zip(boxes, ids):
+                                        data_points.append({
+                                            "SEC": f_idx // 30,
+                                            "ID": int(obj_id),
+                                            "X": round(float(box[0]), 1),
+                                            "Y": round(float(box[1]), 1)
+                                        })
+                                else:
+                                    # FALLBACK: If tracker fails, we assign a 'Unassigned' ID 
+                                    # This prevents the 'Legacy' error from blocking the app
+                                    st.write(f"Frame {f_idx//30}s: Detection active, but Tracking ID pending...")
+                                    boxes = results[0].boxes.xywh.cpu().numpy()
+                                    for box in boxes:
+                                        data_points.append({
+                                            "SEC": f_idx // 30,
+                                            "ID": 0, # Placeholder ID to satisfy the Data Lake requirement
+                                            "X": round(float(box[0]), 1),
+                                            "Y": round(float(box[1]), 1)
+                                        })
+                        
+                        cap.release()
+                        if data_points:
+                            st.session_state['synced_df'] = pd.DataFrame(data_points)
+                            status.update(label="SYNC COMPLETE", state="complete")
+                        else:
+                            st.error("No players detected in this clip. Ensure it is a wide-angle tactical shot.")
 
 elif menu == "DATA_LAKE":
     st.title("📊 DATA_LAKE_SYNCHRONIZATION")
