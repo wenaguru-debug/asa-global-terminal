@@ -37,19 +37,23 @@ if not st.session_state.auth:
 st.sidebar.markdown("### 🛰️ SYSTEM STATUS: ONLINE")
 menu = st.sidebar.radio("COMMAND_MENU", ["DASHBOARD", "TACTICAL_SYNC", "DATA_LAKE"])
 
-# --- 4. ENGINE CORE (RESILIENT LOADING) ---
+import torch # Add this at the very top of your file
+
+# --- 4. ENGINE CORE (SECURITY BYPASS) ---
+@st.cache_resource
 def get_engine():
-    # We use a new name to force the system to ignore the corrupted file
-    new_model_name = 'asa_brain_v1.pt'
     try:
-        # This forces a fresh download from Ultralytics servers directly
         from ultralytics import YOLO
+        # This is the "Security Clearance" line that fixes your error:
+        import ultralytics.nn.tasks
+        torch.serialization.add_safe_globals([ultralytics.nn.tasks.DetectionModel])
+        
+        # Now we load the model
         return YOLO('yolov8n.pt') 
     except Exception as e:
         st.error(f"ENGINE_ERROR: {e}")
         return None
 
-# Attempt to load without the 'cache' roadblock
 engine = get_engine()
 if menu == "DASHBOARD":
     st.title("📈 MARKET & TACTICAL OVERVIEW")
