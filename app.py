@@ -112,6 +112,27 @@ elif menu == "DATA_LAKE":
             m1.metric("UNIQUE_PLAYERS", len(df['ID'].unique()))
             m2.metric("DATA_NODES", len(df))
             
+            # 3. TACTICAL HEATMAP (The Professional View)
+        st.divider()
+        st.subheader("🛰️ TACTICAL DENSITY HEATMAP")
+        
+        import seaborn as sns
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        fig.patch.set_facecolor('#0A0A0A')
+        ax.set_facecolor('#121212')
+
+        # Create the heatmap based on X and Y coordinates
+        sns.kdeplot(
+            data=df, x="X", y="Y", 
+            fill=True, thresh=0, levels=10, cmap="viridis", alpha=0.6, ax=ax
+        )
+        
+        ax.set_title("PLAYER_ZONE_DOMINANCE", color='white', loc='left')
+        ax.axis('off') # Clean tactical look
+        st.pyplot(fig)
+            
             # TACTICAL SUMMARY
             st.subheader("PLAYER_ACTIVITY_SUMMARY")
             # Grouping by ID to see how many seconds each player was tracked
