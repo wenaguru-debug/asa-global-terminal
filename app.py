@@ -98,63 +98,58 @@ if menu == "TACTICAL_SYNC":
                     st.session_state['synced_df'] = pd.DataFrame(data_points)
                     status.update(label="SYNC COMPLETE", state="complete")
 
-# --- 6. DATA LAKE (THE ANALYST SUITE) ---
 elif menu == "DATA_LAKE":
     st.title("📊 DATA_LAKE_SYNCHRONIZATION")
+    st.markdown("Institutional coordinate output synced to unique player tracking IDs.")
     
     if st.session_state['synced_df'] is not None:
         df = st.session_state['synced_df']
         
-        # SAFETY CHECK: Ensure the new 'ID' column exists before plotting
+        # Check if the dataframe is actually the new 'ID' format
         if 'ID' in df.columns:
-            # PRODUCTION METRICS
+            # 1. METRICS
             m1, m2 = st.columns(2)
             m1.metric("UNIQUE_PLAYERS", len(df['ID'].unique()))
             m2.metric("DATA_NODES", len(df))
             
-            # 3. TACTICAL HEATMAP (The Professional View)
-        st.divider()
-        st.subheader("🛰️ TACTICAL DENSITY HEATMAP")
-        
-        import seaborn as sns
-        import matplotlib.pyplot as plt
-
-        fig, ax = plt.subplots(figsize=(10, 6))
-        fig.patch.set_facecolor('#0A0A0A')
-        ax.set_facecolor('#121212')
-
-        # Create the heatmap based on X and Y coordinates
-        sns.kdeplot(
-            data=df, x="X", y="Y", 
-            fill=True, thresh=0, levels=10, cmap="viridis", alpha=0.6, ax=ax
-        )
-        
-        ax.set_title("PLAYER_ZONE_DOMINANCE", color='white', loc='left')
-        ax.axis('off') # Clean tactical look
-        st.pyplot(fig)
-            
-            # TACTICAL SUMMARY
+            # 2. ACTIVITY SUMMARY
             st.subheader("PLAYER_ACTIVITY_SUMMARY")
-            # Grouping by ID to see how many seconds each player was tracked
             summary = df.groupby('ID').agg({
                 'SEC': 'count',
                 'X': ['mean', 'std'],
                 'Y': ['mean', 'std']
             })
             st.dataframe(summary, use_container_width=True)
+
+            # 3. TACTICAL HEATMAP
+            st.divider()
+            st.subheader("🛰️ TACTICAL DENSITY HEATMAP")
+            import seaborn as sns
+            import matplotlib.pyplot as plt
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+            fig.patch.set_facecolor('#0A0A0A')
+            ax.set_facecolor('#121212')
+            
+            # Visualizing zone dominance
+            sns.kdeplot(data=df, x="X", y="Y", fill=True, thresh=0, levels=10, cmap="viridis", alpha=0.6, ax=ax)
+            ax.set_title("PLAYER_ZONE_DOMINANCE", color='white', loc='left')
+            ax.axis('off')
+            st.pyplot(fig)
+            
         else:
-            st.warning("⚠️ OLD DATA DETECTED: The Data Lake contains legacy coordinates without Tracking IDs.")
-            if st.button("PURGE CACHE & RE-SYNC"):
+            st.warning("⚠️ LEGACY DATA: The current data in memory lacks Tracking IDs.")
+            if st.button("RESET & RE-SYNC"):
                 st.session_state['synced_df'] = None
                 st.rerun()
         
-        # RAW DATA & EXPORT
+        # 4. EXPORT SUITE
         with st.expander("VIEW_RAW_COORDINATE_LOG"):
             st.dataframe(df, use_container_width=True)
-            st.download_button("EXPORT_CSV", df.to_csv(index=False), "tactical_data.csv")
+            st.download_button("EXPORT_INSTITUTIONAL_CSV", df.to_csv(index=False), "asa_tactical_export.csv")
+            
     else:
-        st.info("SYSTEM_AWAITING_DATA: Please go to TACTICAL_SYNC and run the analysis.")
-
+        st.info("SYSTEM_AWAITING_DATA: Please execute TACTICAL_SYNC to populate the lake.")
 # --- 7. DASHBOARD (SYSTEM HEALTH) ---
 elif menu == "DASHBOARD":
     st.title("📈 SYSTEM_OVERVIEW")
