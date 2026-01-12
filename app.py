@@ -129,9 +129,25 @@ elif menu == "DATA_LAKE":
     st.markdown("Raw Python coordinate output synced to video frame timestamps.")
     
     if 'synced_df' in st.session_state:
-        df = st.session_state['synced_df']
-        st.metric("TOTAL_NODES_RECORDED", len(df))
-        st.dataframe(df, use_container_width=True)
-        st.download_button("EXPORT_INSTITUTIONAL_CSV", df.to_csv(index=False), "asa_tactical_export.csv")
-    else:
-        st.warning("DATA_LAKE_EMPTY: Execute TACTICAL_SYNC to populate coordinates.")
+        # ... (keep your existing dataframe code) ...
+        
+        st.divider()
+        st.subheader("🛰️ TACTICAL RADAR PLOT")
+        
+        # We create a simple scatter plot to represent the pitch
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        fig.patch.set_facecolor('#0A0A0A') # Match Bloomberg Black
+        ax.set_facecolor('#121212')
+        
+        # Plot the coordinates
+        ax.scatter(df['COORD_X'], df['COORD_Y'], c='#00FF00', alpha=0.5, s=20)
+        
+        # Formatting the "Pitch"
+        ax.set_title("NODE_DENSITY_MAP", color='white', loc='left')
+        ax.tick_params(colors='white')
+        for spine in ax.spines.values():
+            spine.set_color('#333')
+            
+        st.pyplot(fig)
