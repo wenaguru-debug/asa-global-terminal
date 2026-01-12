@@ -1,44 +1,46 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import os
 import torch
+import cv2
 
-# --- 1. INSTITUTIONAL THEMING ---
+# --- 1. SYSTEM CONFIG & ARCHITECTURE ---
 st.set_page_config(page_title="ASA GLOBAL | TACTICAL TERMINAL", layout="wide")
 
+# Institutional Styling
 st.markdown("""
     <style>
     .stApp { background-color: #0A0A0A; color: #FFFFFF; }
     [data-testid="stSidebar"] { background-color: #121212; border-right: 1px solid #333; }
     .stMetric { background-color: #1E1E1E; padding: 15px; border-radius: 5px; border: 1px solid #333; }
     div[data-testid="stMetricValue"] { color: #00FF00; font-family: 'Courier New', monospace; }
-    h1, h2, h3 { color: #FFFFFF; font-family: 'Helvetica Neue', sans-serif; letter-spacing: -1px; }
-    .stButton>button { background-color: #00FF00; color: black; font-weight: bold; border-radius: 2px; width: 100%; }
-    .stTextInput>div>div>input { background-color: #1E1E1E; color: #00FF00; border: 1px solid #333; }
+    .stButton>button { background-color: #00FF00; color: black; font-weight: bold; border-radius: 2px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. AUTHENTICATION ---
+# Initialize Session Memory
+if 'synced_df' not in st.session_state:
+    st.session_state['synced_df'] = None
 if 'auth' not in st.session_state:
     st.session_state.auth = False
 
+# --- 2. SECURITY GATE ---
 if not st.session_state.auth:
     st.title("🏛️ ASA GLOBAL INSTITUTIONAL ACCESS")
-    col1, _ = st.columns([1, 2])
-    with col1:
-        pwd = st.text_input("TERMINAL_KEY >", type="password")
-        if st.button("EXECUTE"):
-            if pwd == "ASA_UNIVERSE_2026":
-                st.session_state.auth = True
-                st.rerun()
+    pwd = st.text_input("TERMINAL_KEY >", type="password")
+    if st.button("EXECUTE"):
+        if pwd == "ASA_UNIVERSE_2026":
+            st.session_state.auth = True
+            st.rerun()
     st.stop()
 
-# --- 3. ENGINE CORE (RESILIENT LOADING) ---
+# --- 3. PRODUCTION ENGINE (WITH TRACKING) ---
 @st.cache_resource
 def get_engine():
     try:
         from ultralytics import YOLO
-        # Master Key for PyTorch 2.6 security
+        # PyTorch 2.6 Patch
         def patched_load(*args, **kwargs):
             kwargs['weights_only'] = False
             return torch.original_load(*args, **kwargs)
@@ -46,121 +48,88 @@ def get_engine():
             torch.original_load = torch.load
             torch.load = patched_load
         return YOLO('yolov8n.pt')
-    except Exception as e:
+    except Exception:
         return None
 
 engine = get_engine()
 
-# --- 4. SIDEBAR & NAVIGATION ---
-st.sidebar.markdown("### 🛰️ SYSTEM STATUS: ONLINE")
+# --- 4. NAVIGATION ---
 menu = st.sidebar.radio("COMMAND_MENU", ["DASHBOARD", "TACTICAL_SYNC", "DATA_LAKE"])
 
-# --- 5. MODULES ---
-if menu == "DASHBOARD":
-    st.title("📈 MARKET & TACTICAL OVERVIEW")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("AI_LATENCY", "12ms", "+2ms")
-    c2.metric("SYNC_STATUS", "OPTIMAL")
-    c3.metric("TRACKED_NODES", "0", "AWAITING FEED")
-    st.divider()
-    st.code("[INFO] Connection established\n[INFO] AI Engine Loaded\n[INFO] Awaiting Feed...", language='bash')
-
-elif menu == "TACTICAL_SYNC":
+# --- 5. TACTICAL SYNC (THE PRODUCTION LOOP) ---
+if menu == "TACTICAL_SYNC":
     st.title("🛰️ TACTICAL_SYNC_ENGINE")
+    uploaded_file = st.file_uploader("UPLOAD FEED", type=['mp4', 'mov', 'avi'])
     
-    uploaded_file = st.file_uploader("UPLOAD TACTICAL WIDE-ANGLE FEED", type=['mp4', 'mov', 'avi'])
-    
-    if uploaded_file is not None:
-        col_left, col_right = st.columns([3, 2])
+    if uploaded_file:
+        t_col1, t_col2 = st.columns([3, 2])
+        with open("temp_v.mp4", "wb") as f: f.write(uploaded_file.read())
         
-        # Save temp file
-        with open("temp_tactical_video.mp4", "wb") as f:
-            f.write(uploaded_file.read())
-            
-        with col_left:
+        with t_col1:
             st.video(uploaded_file)
             
-        with col_right:
-            st.subheader("AI_ANALYSIS_PULSE")
-            if engine:
-                st.success("✅ AI_CORE_ONLINE")
-                
-                if st.button("RUN FULL TACTICAL DATA SYNC"):
-                    with st.status("Syncing Python Logic to Video Frames...", expanded=True) as status:
-                        import cv2
-                        import pandas as pd
+        with t_col2:
+            if st.button("RUN INSTITUTIONAL DATA SYNC"):
+                with st.status("Processing Tactical Metadata...", expanded=True) as status:
+                    cap = cv2.VideoCapture("temp_v.mp4")
+                    data_points = []
+                    f_idx = 0
+                    
+                    while cap.isOpened():
+                        ret, frame = cap.read()
+                        if not ret or f_idx > 300: break # Process 10s for speed
                         
-                        cap = cv2.VideoCapture("temp_tactical_video.mp4")
-                        all_sync_data = []
-                        frame_count = 0
-                        
-                        # Process 1 frame per second to maintain institutional speed
-                        while cap.isOpened():
-                            ret, frame = cap.read()
-                            if not ret:
-                                break
-                                
-                            if frame_count % 30 == 0:
-                                st.write(f"Analyzing Time: {frame_count//30}s...")
-                                results = engine(frame, imgsz=1280, conf=0.15, classes=[0], verbose=False)
-                                
-                                # Grab every player's center-point (X, Y)
-                                for box in results[0].boxes.xywh.cpu().numpy():
-                                    x, y, w, h = box
-                                    all_sync_data.append({
-                                        "TIMESTAMP_SEC": frame_count // 30,
-                                        "COORD_X": round(float(x), 2),
-                                        "COORD_Y": round(float(y), 2),
-                                        "CONFIDENCE": round(float(results[0].boxes.conf[0]), 2)
-                                    })
+                        if f_idx % 30 == 0:
+                            # Using TRACK instead of PREDICT for IDs
+                            results = engine.track(frame, persist=True, imgsz=1280, conf=0.15, classes=[0], verbose=False)
                             
-                            frame_count += 1
-                            if frame_count > 300: # First 10 seconds of tactical sync
-                                break
-                        
-                        cap.release()
-                        st.session_state['synced_df'] = pd.DataFrame(all_sync_data)
-                        status.update(label="SYNC COMPLETE: DATA_LAKE UPDATED", state="complete")
-            else:
-                st.error("❌ ENGINE_OFFLINE")
+                            if results[0].boxes.id is not None:
+                                boxes = results[0].boxes.xywh.cpu().numpy()
+                                ids = results[0].boxes.id.cpu().numpy().astype(int)
+                                for box, obj_id in zip(boxes, ids):
+                                    data_points.append({
+                                        "SEC": f_idx // 30,
+                                        "ID": obj_id,
+                                        "X": round(float(box[0]), 1),
+                                        "Y": round(float(box[1]), 1)
+                                    })
+                        f_idx += 1
+                    cap.release()
+                    st.session_state['synced_df'] = pd.DataFrame(data_points)
+                    status.update(label="SYNC COMPLETE", state="complete")
 
+# --- 6. DATA LAKE (THE ANALYST SUITE) ---
 elif menu == "DATA_LAKE":
     st.title("📊 DATA_LAKE_SYNCHRONIZATION")
-    st.markdown("Raw Python coordinate output synced to video frame timestamps.")
     
-    if 'synced_df' in st.session_state:
+    if st.session_state['synced_df'] is not None:
         df = st.session_state['synced_df']
         
-        # 1. Metrics and Table
-        st.metric("TOTAL_NODES_RECORDED", len(df))
-        st.dataframe(df, use_container_width=True)
-        st.download_button("EXPORT_INSTITUTIONAL_CSV", df.to_csv(index=False), "asa_tactical_export.csv")
+        # PRODUCTION METRICS
+        m1, m2 = st.columns(2)
+        m1.metric("UNIQUE_PLAYERS", len(df['ID'].unique()))
+        m2.metric("DATA_NODES", len(df))
         
-        # 2. THE RADAR PLOT (With Safety Alignment)
-        st.divider()
-        st.subheader("🛰️ TACTICAL RADAR PLOT")
+        # TACTICAL SUMMARY (The "Product" Insight)
+        st.subheader("PLAYER_ACTIVITY_SUMMARY")
+        summary = df.groupby('ID').agg({
+            'SEC': 'count',
+            'X': ['mean', 'std'],
+            'Y': ['mean', 'std']
+        })
+        st.dataframe(summary, use_container_width=True)
         
-        import matplotlib.pyplot as plt
-
-        # Ensure we are using the correct column names
-        x_col = 'COORD_X' if 'COORD_X' in df.columns else df.columns[1]
-        y_col = 'COORD_Y' if 'COORD_Y' in df.columns else df.columns[2]
-
-        fig, ax = plt.subplots(figsize=(10, 6))
-        fig.patch.set_facecolor('#0A0A0A') 
-        ax.set_facecolor('#121212')
-        
-        # Plotting the "Ghost" of the tactical movement
-        ax.scatter(df[x_col], df[y_col], c='#00FF00', alpha=0.3, s=15, label="Node Position")
-        
-        ax.set_title(f"TACTICAL_DENSITY_MAP ({len(df)} Nodes)", color='white', loc='left', fontsize=10)
-        ax.set_xlabel("PITCH_WIDTH (PX)", color='#555')
-        ax.set_ylabel("PITCH_LENGTH (PX)", color='#555')
-        ax.tick_params(colors='#555', labelsize=8)
-        
-        for spine in ax.spines.values():
-            spine.set_color('#333')
-            
-        st.pyplot(fig)
+        # RAW DATA & EXPORT
+        with st.expander("VIEW_RAW_COORDINATE_LOG"):
+            st.dataframe(df, use_container_width=True)
+            st.download_button("EXPORT_CSV", df.to_csv(index=False), "tactical_data.csv")
     else:
-        st.warning("DATA_LAKE_EMPTY: Execute TACTICAL_SYNC to populate coordinates.")
+        st.info("SYSTEM_AWAITING_DATA: Please run Tactical Sync.")
+
+# --- 7. DASHBOARD (SYSTEM HEALTH) ---
+elif menu == "DASHBOARD":
+    st.title("📈 SYSTEM_OVERVIEW")
+    st.write("Terminal running on ASA_GLOBAL_CORE_v1.3")
+    if engine: st.success("AI_ENGINE: ONLINE")
+    if st.session_state['synced_df'] is not None:
+        st.info(f"CACHE: {len(st.session_state['synced_df'])} nodes in memory.")
