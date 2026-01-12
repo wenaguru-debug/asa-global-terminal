@@ -77,12 +77,38 @@ elif menu == "TACTICAL_SYNC":
             st.subheader("AI_ANALYSIS_PULSE")
             if engine:
                 st.success("✅ AI_CORE_ONLINE")
-                if st.button("RUN_TACTICAL_INFERENCE"):
-                    with st.status("Analyzing Wide-Angle Feed...", expanded=True) as status:
-                        st.write("Detecting Tactical Nodes...")
-                        st.image("https://raw.githubusercontent.com/ultralytics/assets/main/yolov8/yolo-comparison.png")
-                        status.update(label="ANALYSIS_COMPLETE", state="complete")
-                        st.metric("NODES_DETECTED", "22", "Full Pitch Sync")
+                
+                # --- NEW: TACTICAL FRAME GRABBER ---
+                if st.button("CAPTURE & ANALYZE CURRENT FRAME"):
+                    with st.status("Extracting Tactical Frame...", expanded=True) as status:
+                        import cv2
+                        import yt_dlp
+                        
+                        # 1. Get Stream URL
+                        ydl_opts = {'format': 'best', 'quiet': True}
+                        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                            info = ydl.extract_info(yt_url, download=False)
+                            stream_url = info['url']
+                        
+                        # 2. Capture Frame via OpenCV
+                        cap = cv2.VideoCapture(stream_url)
+                        ret, frame = cap.read()
+                        cap.release()
+                        
+                        if ret:
+                            # 3. Run Real AI Inference
+                            results = engine(frame)
+                            annotated_frame = results[0].plot() # Draws the boxes
+                            
+                            # 4. Display Result
+                            st.image(annotated_frame, caption="LIVE TACTICAL ANALYSIS", use_container_width=True)
+                            
+                            # 5. Extract Data for the Lake
+                            node_count = len(results[0].boxes)
+                            st.metric("NODES_DETECTED", f"{node_count}")
+                            status.update(label="ANALYSIS_COMPLETE", state="complete")
+                        else:
+                            st.error("Failed to capture frame from stream.")
             else:
                 st.error("❌ ENGINE_OFFLINE")
 
