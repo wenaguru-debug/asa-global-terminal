@@ -30,12 +30,13 @@ else:
     elif menu == "TACTICAL SYNC":
         st.header("🛰️ VIDEO SYNC ENGINE")
         
-        # TEST THE BRAIN
         try:
+            import ultralytics
             from ultralytics import YOLO
-            st.success("✅ AI ENGINE (YOLO) LOADED")
+            st.success(f"✅ AI ENGINE LOADED (Version: {ultralytics.__version__})")
         except Exception as e:
-            st.warning("⚠️ AI Engine still warming up or needs installation.")
+            st.error(f"❌ LOGIC ERROR: {e}")
+            st.info("The system sees the files, but the 'Brain' isn't waking up.")
 
         yt_url = st.text_input("PASTE TACTICAL YOUTUBE URL:")
         if yt_url:
