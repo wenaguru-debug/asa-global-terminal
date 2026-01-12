@@ -27,7 +27,7 @@ else:
         st.write("System Status: ONLINE")
         st.info("Awaiting tactical data feed...")
         
- elif menu == "TACTICAL SYNC":
+    elif menu == "TACTICAL SYNC":
         st.header("🛰️ TACTICAL SYNC ENGINE")
         
         # Confirmation of Brain Health
