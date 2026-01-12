@@ -94,46 +94,44 @@ elif menu == "TACTICAL_SYNC":
                         all_sync_data = []
                         frame_count = 0
                         
-                        # Process every 30th frame (1 frame per second) to keep it fast
+                        # Process 1 frame per second to maintain institutional speed
                         while cap.isOpened():
                             ret, frame = cap.read()
                             if not ret:
                                 break
                                 
                             if frame_count % 30 == 0:
-                                st.write(f"Syncing Timestamp: {frame_count//30}s...")
+                                st.write(f"Analyzing Time: {frame_count//30}s...")
                                 results = engine(frame, imgsz=1280, conf=0.15, classes=[0], verbose=False)
                                 
-                                # Extract X, Y centers of every player detected
+                                # Grab every player's center-point (X, Y)
                                 for box in results[0].boxes.xywh.cpu().numpy():
                                     x, y, w, h = box
                                     all_sync_data.append({
-                                        "SEC": frame_count // 30,
-                                        "PLAYER_X": round(x, 2),
-                                        "PLAYER_Y": round(y, 2),
-                                        "CONF": round(float(results[0].boxes.conf[0]), 2)
+                                        "TIMESTAMP_SEC": frame_count // 30,
+                                        "COORD_X": round(float(x), 2),
+                                        "COORD_Y": round(float(y), 2),
+                                        "CONFIDENCE": round(float(results[0].boxes.conf[0]), 2)
                                     })
                             
                             frame_count += 1
-                            if frame_count > 300: # Limit to first 10 seconds for the "Master Prototype"
+                            if frame_count > 300: # First 10 seconds of tactical sync
                                 break
                         
                         cap.release()
-                        
-                        # Save to Session State for the DATA_LAKE page
                         st.session_state['synced_df'] = pd.DataFrame(all_sync_data)
-                        status.update(label="SYNC COMPLETE: Data Exported to Lake", state="complete")
+                        status.update(label="SYNC COMPLETE: DATA_LAKE UPDATED", state="complete")
+            else:
+                st.error("❌ ENGINE_OFFLINE")
+
 elif menu == "DATA_LAKE":
     st.title("📊 DATA_LAKE_SYNCHRONIZATION")
+    st.markdown("Raw Python coordinate output synced to video frame timestamps.")
     
     if 'synced_df' in st.session_state:
-        st.subheader("LIVE TACTICAL COORDINATES")
         df = st.session_state['synced_df']
+        st.metric("TOTAL_NODES_RECORDED", len(df))
         st.dataframe(df, use_container_width=True)
-        st.download_button("EXPORT_INSTITUTIONAL_DATA", df.to_csv(index=False), "asa_tactical_sync.csv")
+        st.download_button("EXPORT_INSTITUTIONAL_CSV", df.to_csv(index=False), "asa_tactical_export.csv")
     else:
-        st.info("Awaiting Tactical Sync. Go to TACTICAL_SYNC and run the analysis first.")
-    }
-    df = pd.DataFrame(sync_data)
-    st.dataframe(df, use_container_width=True)
-    st.download_button("EXPORT_CSV", df.to_csv(), "asa_tactical_export.csv")
+        st.warning("DATA_LAKE_EMPTY: Execute TACTICAL_SYNC to populate coordinates.")
