@@ -105,26 +105,34 @@ elif menu == "DATA_LAKE":
     if st.session_state['synced_df'] is not None:
         df = st.session_state['synced_df']
         
-        # PRODUCTION METRICS
-        m1, m2 = st.columns(2)
-        m1.metric("UNIQUE_PLAYERS", len(df['ID'].unique()))
-        m2.metric("DATA_NODES", len(df))
-        
-        # TACTICAL SUMMARY (The "Product" Insight)
-        st.subheader("PLAYER_ACTIVITY_SUMMARY")
-        summary = df.groupby('ID').agg({
-            'SEC': 'count',
-            'X': ['mean', 'std'],
-            'Y': ['mean', 'std']
-        })
-        st.dataframe(summary, use_container_width=True)
+        # SAFETY CHECK: Ensure the new 'ID' column exists before plotting
+        if 'ID' in df.columns:
+            # PRODUCTION METRICS
+            m1, m2 = st.columns(2)
+            m1.metric("UNIQUE_PLAYERS", len(df['ID'].unique()))
+            m2.metric("DATA_NODES", len(df))
+            
+            # TACTICAL SUMMARY
+            st.subheader("PLAYER_ACTIVITY_SUMMARY")
+            # Grouping by ID to see how many seconds each player was tracked
+            summary = df.groupby('ID').agg({
+                'SEC': 'count',
+                'X': ['mean', 'std'],
+                'Y': ['mean', 'std']
+            })
+            st.dataframe(summary, use_container_width=True)
+        else:
+            st.warning("⚠️ OLD DATA DETECTED: The Data Lake contains legacy coordinates without Tracking IDs.")
+            if st.button("PURGE CACHE & RE-SYNC"):
+                st.session_state['synced_df'] = None
+                st.rerun()
         
         # RAW DATA & EXPORT
         with st.expander("VIEW_RAW_COORDINATE_LOG"):
             st.dataframe(df, use_container_width=True)
             st.download_button("EXPORT_CSV", df.to_csv(index=False), "tactical_data.csv")
     else:
-        st.info("SYSTEM_AWAITING_DATA: Please run Tactical Sync.")
+        st.info("SYSTEM_AWAITING_DATA: Please go to TACTICAL_SYNC and run the analysis.")
 
 # --- 7. DASHBOARD (SYSTEM HEALTH) ---
 elif menu == "DASHBOARD":
