@@ -29,7 +29,14 @@ else:
         
     elif menu == "TACTICAL SYNC":
         st.header("🛰️ VIDEO SYNC ENGINE")
+        
+        # TEST THE BRAIN
+        try:
+            from ultralytics import YOLO
+            st.success("✅ AI ENGINE (YOLO) LOADED")
+        except Exception as e:
+            st.warning("⚠️ AI Engine still warming up or needs installation.")
+
         yt_url = st.text_input("PASTE TACTICAL YOUTUBE URL:")
         if yt_url:
             st.video(yt_url)
-            st.success("Video Stream Connected to Python Logic.")
