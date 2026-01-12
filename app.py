@@ -125,12 +125,14 @@ elif menu == "TACTICAL_SYNC":
                         status.update(label="SYNC COMPLETE: Data Exported to Lake", state="complete")
 elif menu == "DATA_LAKE":
     st.title("📊 DATA_LAKE_SYNCHRONIZATION")
-    sync_data = {
-        'FRAME_ID': [100, 101, 102, 103, 104],
-        'SEC_INDEX': [4.0, 4.04, 4.08, 4.12, 4.16],
-        'PLAYER_X': [0.124, 0.125, 0.127, 0.130, 0.132],
-        'PLAYER_Y': [0.880, 0.881, 0.882, 0.884, 0.885],
-        'VELOCITY_M/S': [6.2, 6.3, 6.5, 6.8, 7.1]
+    
+    if 'synced_df' in st.session_state:
+        st.subheader("LIVE TACTICAL COORDINATES")
+        df = st.session_state['synced_df']
+        st.dataframe(df, use_container_width=True)
+        st.download_button("EXPORT_INSTITUTIONAL_DATA", df.to_csv(index=False), "asa_tactical_sync.csv")
+    else:
+        st.info("Awaiting Tactical Sync. Go to TACTICAL_SYNC and run the analysis first.")
     }
     df = pd.DataFrame(sync_data)
     st.dataframe(df, use_container_width=True)
