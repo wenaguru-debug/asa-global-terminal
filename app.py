@@ -129,25 +129,38 @@ elif menu == "DATA_LAKE":
     st.markdown("Raw Python coordinate output synced to video frame timestamps.")
     
     if 'synced_df' in st.session_state:
-        # ... (keep your existing dataframe code) ...
+        df = st.session_state['synced_df']
         
+        # 1. Metrics and Table
+        st.metric("TOTAL_NODES_RECORDED", len(df))
+        st.dataframe(df, use_container_width=True)
+        st.download_button("EXPORT_INSTITUTIONAL_CSV", df.to_csv(index=False), "asa_tactical_export.csv")
+        
+        # 2. THE RADAR PLOT (With Safety Alignment)
         st.divider()
         st.subheader("🛰️ TACTICAL RADAR PLOT")
         
-        # We create a simple scatter plot to represent the pitch
         import matplotlib.pyplot as plt
 
+        # Ensure we are using the correct column names
+        x_col = 'COORD_X' if 'COORD_X' in df.columns else df.columns[1]
+        y_col = 'COORD_Y' if 'COORD_Y' in df.columns else df.columns[2]
+
         fig, ax = plt.subplots(figsize=(10, 6))
-        fig.patch.set_facecolor('#0A0A0A') # Match Bloomberg Black
+        fig.patch.set_facecolor('#0A0A0A') 
         ax.set_facecolor('#121212')
         
-        # Plot the coordinates
-        ax.scatter(df['COORD_X'], df['COORD_Y'], c='#00FF00', alpha=0.5, s=20)
+        # Plotting the "Ghost" of the tactical movement
+        ax.scatter(df[x_col], df[y_col], c='#00FF00', alpha=0.3, s=15, label="Node Position")
         
-        # Formatting the "Pitch"
-        ax.set_title("NODE_DENSITY_MAP", color='white', loc='left')
-        ax.tick_params(colors='white')
+        ax.set_title(f"TACTICAL_DENSITY_MAP ({len(df)} Nodes)", color='white', loc='left', fontsize=10)
+        ax.set_xlabel("PITCH_WIDTH (PX)", color='#555')
+        ax.set_ylabel("PITCH_LENGTH (PX)", color='#555')
+        ax.tick_params(colors='#555', labelsize=8)
+        
         for spine in ax.spines.values():
             spine.set_color('#333')
             
         st.pyplot(fig)
+    else:
+        st.warning("DATA_LAKE_EMPTY: Execute TACTICAL_SYNC to populate coordinates.")
