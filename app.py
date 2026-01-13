@@ -1,4 +1,32 @@
 import streamlit as st
+
+# --- INSTITUTIONAL UI OVERRIDE ---
+st.set_page_config(page_title="ASA GLOBAL | TACTICAL TERMINAL", layout="wide")
+
+st.markdown("""
+    <style>
+    /* Main Background - Bloomberg Black */
+    .stApp { background-color: #050505; color: #00FF00; font-family: 'Courier New', monospace; }
+    
+    /* Sidebar - Glassmorphism */
+    [data-testid="stSidebar"] { background-color: rgba(15, 15, 15, 0.95); border-right: 1px solid #333; }
+    
+    /* Metric Cards - Command Center Look */
+    div[data-testid="stMetric"] {
+        background-color: #0A0A0A;
+        border: 1px solid #1A1A1A;
+        padding: 15px;
+        border-radius: 0px;
+        border-left: 3px solid #00FF00;
+    }
+    
+    /* Ticker Text Styling */
+    .ticker-text { color: #00FF00; font-weight: bold; font-size: 0.9rem; }
+    
+    /* Headers */
+    h1, h2, h3 { color: #FFFFFF !important; text-transform: uppercase; letter-spacing: 2px; }
+    </style>
+    """, unsafe_allow_html=True)
 import pandas as pd
 import numpy as np
 import os
