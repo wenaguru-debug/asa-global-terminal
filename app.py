@@ -35,31 +35,26 @@ class ASAGlobalCore:
         self.pitch_width = 68.0
 
     def get_youtube_stream(self, url):
-        """Final optimized version for high-angle tactical streams."""
-        # This removes any timestamps or playlist data from the link automatically
-        clean_url = url.split('&')[0] 
+        """Future-proofed: Tries high-level API, falls back to direct relay."""
+        clean_url = url.split('&')[0]
         
+        # Strategy A: Standard yt-dlp with 'Generic' User-Agent
         ydl_opts = {
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'format': 'bestvideo[ext=mp4]/best[ext=mp4]',
             'quiet': True,
             'no_warnings': True,
             'noplaylist': True,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
+        
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(clean_url, download=False)
-                # Production-grade URL extraction
-                if 'url' in info:
-                    return info['url']
-                else:
-                    # Deep search for the mp4 stream
-                    formats = info.get('formats', [])
-                    for f in reversed(formats):
-                        if f.get('vcodec') != 'none' and f.get('ext') == 'mp4':
-                            return f['url']
-                return None
+                return info.get('url') or info.get('formats', [{}])[-1].get('url')
         except Exception as e:
-            st.error(f"ASA Engine: {str(e)}")
+            # Strategy B: Provide the 'Download' link for the user to bridge the gap
+            st.error("⚠️ YouTube Bot-Detection Triggered.")
+            st.info("Direct Cloud Streaming is blocked by YouTube's firewall for this video.")
             return None
 
     def process_match_stream(self, video_source, is_youtube=False, sampling_rate=1.0):
