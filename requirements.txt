@@ -4,3 +4,5 @@ pandas
 numpy
 fpdf
 opencv-python-headless
+lapx
+filterpy
