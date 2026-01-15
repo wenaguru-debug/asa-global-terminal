@@ -1,5 +1,6 @@
-streamlit>=1.30.0
-ultralytics==8.1.0
-yt-dlp
-lapx>=0.5.2
-scipy
+streamlit
+ultralytics
+pandas
+numpy
+fpdf
+opencv-python-headless
