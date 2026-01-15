@@ -7,11 +7,11 @@ import tempfile
 from fpdf import FPDF
 import datetime
 import os
+import yt_dlp
 
-# --- CLASS 1: THE PDF ARCHITECT ---
+# --- PILLAR 1: THE PDF ARCHITECT ---
 class ASAReport(FPDF):
     def header(self):
-        # Professional Institutional Header
         self.set_font('Arial', 'B', 15)
         self.cell(0, 10, 'ASA GLOBAL - INSTITUTIONAL MATCH DOSSIER', 0, 1, 'C')
         self.ln(5)
@@ -27,18 +27,32 @@ class ASAReport(FPDF):
         self.cell(100, 8, label, 1)
         self.cell(0, 8, str(value), 1, 1)
 
-# --- CLASS 2: THE ASA CORE ENGINE ---
+# --- PILLAR 2: THE ASA CORE ENGINE ---
 class ASAGlobalCore:
     def __init__(self, model_variant='yolov8n.pt'):
         self.model = YOLO(model_variant)
         self.pitch_length = 105.0
         self.pitch_width = 68.0
 
-    def process_match_stream(self, video_source, sampling_rate=0.5):
+    def get_youtube_stream(self, url):
+        """Extracts the direct stream URL from YouTube."""
+        ydl_opts = {
+            'format': 'best[ext=mp4]',
+            'quiet': True,
+            'no_warnings': True,
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            return info['url']
+
+    def process_match_stream(self, video_source, is_youtube=False, sampling_rate=1.0):
         """
-        Memory-optimized streaming for full matches.
-        sampling_rate: Seconds between analysis (0.5 = 2fps)
+        Processes video and extracts tactical coordinates.
+        sampling_rate=1.0 means we analyze 1 frame per second (optimized for speed).
         """
+        if is_youtube:
+            video_source = self.get_youtube_stream(video_source)
+
         cap = cv2.VideoCapture(video_source)
         fps = cap.get(cv2.CAP_PROP_FPS)
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -47,7 +61,6 @@ class ASAGlobalCore:
         match_data = []
         frame_idx = 0
         
-        # Progress Bar for Streamlit UI
         prog_bar = st.progress(0)
         status_text = st.empty()
         
@@ -56,8 +69,8 @@ class ASAGlobalCore:
             if not ret: break
             
             if frame_idx % frame_stride == 0:
-                # Optimized inference
-                results = self.model.track(frame, persist=True, verbose=False, conf=0.35, classes=[0])
+                # YOLOv8 tracking logic
+                results = self.model.track(frame, persist=True, verbose=False, conf=0.30, classes=[0])
                 
                 if results[0].boxes.id is not None:
                     h, w, _ = frame.shape
@@ -65,7 +78,7 @@ class ASAGlobalCore:
                     ids = results[0].boxes.id.cpu().numpy().astype(int)
                     
                     for box, obj_id in zip(boxes, ids):
-                        # Convert Pixels to Pitch Meters
+                        # Coordinate Mapping to Pitch Meters
                         x_pitch = (box[0] / w) * self.pitch_length
                         y_pitch = (box[1] / h) * self.pitch_width
                         
@@ -76,10 +89,10 @@ class ASAGlobalCore:
                             'y': round(y_pitch, 2)
                         })
                 
-                # Update UI Progress
-                progress = frame_idx / total_frames
+                # Visual UI Progress
+                progress = min(frame_idx / total_frames, 1.0) if total_frames > 0 else 0.5
                 prog_bar.progress(progress)
-                status_text.text(f"ASA AI analyzing match... {int(progress*100)}%")
+                status_text.text(f"ASA AI extracting tactical data... {int(progress*100)}%")
                 
             frame_idx += 1
             
@@ -87,92 +100,88 @@ class ASAGlobalCore:
         return pd.DataFrame(match_data)
 
     def generate_institutional_pdf(self, df, match_name):
-        """Builds the 5-page PDF report structure."""
         pdf = ASAReport()
         pdf.set_auto_page_break(auto=True, margin=15)
         
-        # --- Page 1: Executive Summary ---
+        # Page 1: Summary
         pdf.add_page()
-        pdf.chapter_title("Page 1: Executive Summary")
-        pdf.add_metric_row("Match Name", match_name)
+        pdf.chapter_title("Page 1: Executive Match Summary")
+        pdf.add_metric_row("Source", match_name)
         pdf.add_metric_row("Analysis Date", str(datetime.date.today()))
         
         field_tilt = (len(df[df['x'] > 70]) / len(df) * 100) if not df.empty else 0
-        pdf.add_metric_row("Territorial Dominance (Field Tilt)", f"{round(field_tilt, 1)}%")
+        pdf.add_metric_row("Field Tilt (Attacking Presence)", f"{round(field_tilt, 1)}%")
 
-        # --- Page 2: Tactical Shape ---
+        # Page 2: Tactical Geometry
         pdf.add_page()
-        pdf.chapter_title("Page 2: Team Tactical Architecture")
-        avg_x = df.groupby('player_id')['x'].mean().mean()
-        pdf.add_metric_row("Mean Defensive Line Height", f"{round(avg_x, 2)}m")
-
-        # --- Page 3: Athlete Physical Audit ---
-        pdf.add_page()
-        pdf.chapter_title("Page 3: Athlete Physical Rankings")
-        # Sample ranking
+        pdf.chapter_title("Page 2: Tactical Geometry & Compactness")
         if not df.empty:
-            top_players = df.groupby('player_id').size().sort_values(ascending=False).head(5)
-            for pid, count in top_players.items():
-                pdf.cell(0, 10, f"Player ID {pid}: High Engagement Score ({count} tactical events)", ln=True)
+            avg_x = df['x'].mean()
+            pdf.add_metric_row("Average Defensive Line (m)", f"{round(avg_x, 2)}m")
 
-        # --- Page 4 & 5 (Scouting & Recommendations) ---
+        # Page 3, 4, 5: Templates
         pdf.add_page()
-        pdf.chapter_title("Page 4: ASA Global Scouting Spotlight")
+        pdf.chapter_title("Page 3: Athlete Physical Audit")
         pdf.add_page()
-        pdf.chapter_title("Page 5: Actionable Coaching Recommendations")
+        pdf.chapter_title("Page 4: Scouting Spotlight")
+        pdf.add_page()
+        pdf.chapter_title("Page 5: Tactical Recommendations")
 
-        # Return byte string for Streamlit download
         return pdf.output(dest='S').encode('latin-1')
 
-# --- STREAMLIT UI BOILERPLATE ---
-st.set_page_config(page_title="ASA Global | Match Intelligence", layout="wide")
+# --- STREAMLIT UI ---
+st.set_page_config(page_title="ASA Global | Match Engine", layout="wide")
 
 st.sidebar.title("🦁 ASA Global")
-st.sidebar.info("2026 Institutional Analysis Suite")
+st.sidebar.markdown("### Status: Operational")
+st.sidebar.info("v1.2: YouTube Stream Enabled")
 
-st.title("⚽ Full-Match Tactical Production")
+st.title("⚽ Institutional Tactical Intelligence")
 
-st.subheader("Step 1: Ingest Match Footage")
-source_type = st.radio("Select Source", ["Cloud Link (Recommended for 2GB+)", "Local Upload (Small Clips)"])
+source_type = st.radio("Select Input Source", ["YouTube URL", "Local Upload"])
 
 video_path = None
+is_yt = False
 
-if source_type == "Local Upload (Small Clips)":
-    video_file = st.file_uploader("Upload Clip", type=['mp4', 'mov', 'avi'])
-    if video_file:
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp:
-            tmp.write(video_file.read())
-            video_path = tmp.name
+if source_type == "YouTube URL":
+    yt_link = st.text_input("Paste YouTube Link", placeholder="https://www.youtube.com/watch?v=...")
+    if yt_link:
+        video_path = yt_link
+        is_yt = True
 else:
-    video_url = st.text_input("Paste Direct Video Link (Google Drive/Dropbox Direct Link)")
-    if video_url:
-        video_path = video_url # OpenCV can read direct streaming URLs
+    uploaded_file = st.file_uploader("Upload MP4 Clip", type=['mp4', 'mov'])
+    if uploaded_file:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp:
+            tmp.write(uploaded_file.read())
+            video_path = tmp.name
 
-    if st.button("🚀 EXECUTE FULL ANALYSIS"):
+if video_path:
+    if st.button("🚀 EXECUTE FULL PRODUCTION ANALYSIS"):
         core = ASAGlobalCore()
         
-        with st.status("Initializing ASA Engine...", expanded=True) as status:
-            data = core.process_match_stream(video_path)
-            status.update(label="Analysis Complete!", state="complete", expanded=False)
+        with st.spinner("Processing match frames..."):
+            data = core.process_match_stream(video_path, is_youtube=is_yt)
             
         if not data.empty:
-            st.success("Analysis finalized. System ready for reporting.")
+            st.success("Match Analysis Complete.")
             
-            # Show a tactical glimpse
-            st.subheader("Tactical Density (Live Sample)")
-            st.scatter_chart(data=data.head(500), x='x', y='y', color='player_id')
+            # Simple Scatter Visualization
+            st.subheader("Tactical Density Visualization")
+            st.scatter_chart(data=data.head(1000), x='x', y='y', color='player_id')
             
-            # PDF Generation
-            pdf_bytes = core.generate_institutional_pdf(data, video_file.name)
+            # PDF Download
+            report_name = yt_link if is_yt else "Uploaded_File"
+            pdf_bytes = core.generate_institutional_pdf(data, report_name)
             
             st.download_button(
                 label="📥 DOWNLOAD 5-PAGE INSTITUTIONAL REPORT",
                 data=pdf_bytes,
-                file_name=f"ASA_Report_{video_file.name}.pdf",
+                file_name="ASA_Tactical_Report.pdf",
                 mime="application/pdf"
             )
-            
-            # Cleanup temp file
-            os.remove(video_path)
         else:
-            st.error("No players detected. Please ensure the footage is tactical wide-angle.")
+            st.error("No data extracted. Verify the camera angle is wide-angle.")
+
+        # Cleanup if local
+        if not is_yt and os.path.exists(video_path):
+            os.remove(video_path)
