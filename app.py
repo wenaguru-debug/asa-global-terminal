@@ -35,22 +35,35 @@ class ASAGlobalCore:
         self.pitch_width = 68.0
 
     def get_youtube_stream(self, url):
-        """Extracts the direct stream URL from YouTube with fallback logic."""
+        """Extracts a single video stream, forcing no-playlist mode."""
         ydl_opts = {
-            'format': 'best[ext=mp4]/best', # Prioritize MP4 for OpenCV compatibility
+            'format': 'best[ext=mp4]/best',
             'quiet': True,
             'no_warnings': True,
+            'noplaylist': True,  # CRITICAL: Prevent the recursive playlist error
+            'extract_flat': False,
         }
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            # Fallback logic: if 'url' isn't at the top, grab it from the best format
-            if 'url' in info:
-                return info['url']
-            elif 'formats' in info:
-                # Filter for formats that actually have a URL and preferred extension
-                return info['formats'][-1]['url']
-            else:
-                raise KeyError("Could not find a valid stream URL in the YouTube metadata.")
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                # We use process=True to ensure we get the actual stream URL
+                info = ydl.extract_info(url, download=False)
+                
+                # If it's a playlist-style URL, yt-dlp might return a list of entries
+                if 'entries' in info:
+                    video_data = info['entries'][0]
+                else:
+                    video_data = info
+
+                if 'url' in video_data:
+                    return video_data['url']
+                elif 'formats' in video_data:
+                    return video_data['formats'][-1]['url']
+                else:
+                    st.error("ASA Engine Error: Link format not supported.")
+                    return None
+        except Exception as e:
+            st.error(f"YouTube Engine Error: {str(e)}")
+            return None
 
     def process_match_stream(self, video_source, is_youtube=False, sampling_rate=1.0):
         """
