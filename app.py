@@ -35,34 +35,31 @@ class ASAGlobalCore:
         self.pitch_width = 68.0
 
     def get_youtube_stream(self, url):
-        """Extracts a single video stream, forcing no-playlist mode."""
+        """Final optimized version for high-angle tactical streams."""
+        # This removes any timestamps or playlist data from the link automatically
+        clean_url = url.split('&')[0] 
+        
         ydl_opts = {
-            'format': 'best[ext=mp4]/best',
+            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
             'quiet': True,
             'no_warnings': True,
-            'noplaylist': True,  # CRITICAL: Prevent the recursive playlist error
-            'extract_flat': False,
+            'noplaylist': True,
         }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # We use process=True to ensure we get the actual stream URL
-                info = ydl.extract_info(url, download=False)
-                
-                # If it's a playlist-style URL, yt-dlp might return a list of entries
-                if 'entries' in info:
-                    video_data = info['entries'][0]
+                info = ydl.extract_info(clean_url, download=False)
+                # Production-grade URL extraction
+                if 'url' in info:
+                    return info['url']
                 else:
-                    video_data = info
-
-                if 'url' in video_data:
-                    return video_data['url']
-                elif 'formats' in video_data:
-                    return video_data['formats'][-1]['url']
-                else:
-                    st.error("ASA Engine Error: Link format not supported.")
-                    return None
+                    # Deep search for the mp4 stream
+                    formats = info.get('formats', [])
+                    for f in reversed(formats):
+                        if f.get('vcodec') != 'none' and f.get('ext') == 'mp4':
+                            return f['url']
+                return None
         except Exception as e:
-            st.error(f"YouTube Engine Error: {str(e)}")
+            st.error(f"ASA Engine: {str(e)}")
             return None
 
     def process_match_stream(self, video_source, is_youtube=False, sampling_rate=1.0):
