@@ -6,3 +6,4 @@ fpdf
 opencv-python-headless
 lapx
 filterpy
+yt-dlp
