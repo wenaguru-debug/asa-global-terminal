@@ -132,13 +132,21 @@ st.sidebar.info("2026 Institutional Analysis Suite")
 
 st.title("⚽ Full-Match Tactical Production")
 
-video_file = st.file_uploader("Upload Full Match Video", type=['mp4', 'mov', 'avi'])
+st.subheader("Step 1: Ingest Match Footage")
+source_type = st.radio("Select Source", ["Cloud Link (Recommended for 2GB+)", "Local Upload (Small Clips)"])
 
-if video_file:
-    # Save to a temp file safely
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp:
-        tmp.write(video_file.read())
-        video_path = tmp.name
+video_path = None
+
+if source_type == "Local Upload (Small Clips)":
+    video_file = st.file_uploader("Upload Clip", type=['mp4', 'mov', 'avi'])
+    if video_file:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp:
+            tmp.write(video_file.read())
+            video_path = tmp.name
+else:
+    video_url = st.text_input("Paste Direct Video Link (Google Drive/Dropbox Direct Link)")
+    if video_url:
+        video_path = video_url # OpenCV can read direct streaming URLs
 
     if st.button("🚀 EXECUTE FULL ANALYSIS"):
         core = ASAGlobalCore()
