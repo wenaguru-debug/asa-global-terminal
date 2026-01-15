@@ -35,15 +35,22 @@ class ASAGlobalCore:
         self.pitch_width = 68.0
 
     def get_youtube_stream(self, url):
-        """Extracts the direct stream URL from YouTube."""
+        """Extracts the direct stream URL from YouTube with fallback logic."""
         ydl_opts = {
-            'format': 'best[ext=mp4]',
+            'format': 'best[ext=mp4]/best', # Prioritize MP4 for OpenCV compatibility
             'quiet': True,
             'no_warnings': True,
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-            return info['url']
+            # Fallback logic: if 'url' isn't at the top, grab it from the best format
+            if 'url' in info:
+                return info['url']
+            elif 'formats' in info:
+                # Filter for formats that actually have a URL and preferred extension
+                return info['formats'][-1]['url']
+            else:
+                raise KeyError("Could not find a valid stream URL in the YouTube metadata.")
 
     def process_match_stream(self, video_source, is_youtube=False, sampling_rate=1.0):
         """
